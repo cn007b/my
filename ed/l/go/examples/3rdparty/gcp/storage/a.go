@@ -3,7 +3,10 @@ package storage
 import (
 	"context"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
+	"strings"
 
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/iterator"
@@ -12,14 +15,25 @@ import (
 
 func Run(projectID, SAFilePath, bucketName string) {
 	ctx := context.Background()
-	c := getClient(ctx, SAFilePath)
+	c := getClientWithCredentialsFile(ctx, SAFilePath)
+	//c := getClientWithCredentialsJSON(ctx, []byte(``))
 
 	//printBuckets(ctx, c, projectID)
-	uploadTestFile(ctx, c, bucketName)
+	//uploadTestFile(ctx, c, bucketName)
+	uploadFile(ctx, c, "/tmp/debug.txt", bucketName)
 }
 
-func getClient(ctx context.Context, filepath string) *storage.Client {
+func getClientWithCredentialsFile(ctx context.Context, filepath string) *storage.Client {
 	client, err := storage.NewClient(ctx, option.WithCredentialsFile(filepath))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return client
+}
+
+func getClientWithCredentialsJSON(ctx context.Context, credentialsJSON []byte) *storage.Client {
+	client, err := storage.NewClient(ctx, option.WithCredentialsJSON(credentialsJSON))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,6 +54,27 @@ func uploadTestFile(ctx context.Context, c *storage.Client, bucketName string) {
 
 	if err := wc.Close(); err != nil {
 		log.Fatalf("unable to close bucket %v file, error: %+v", bucketName, err)
+	}
+}
+
+func uploadFile(ctx context.Context, c *storage.Client, srcFile string, bucketName string) {
+	content, err := ioutil.ReadFile(srcFile)
+	if err != nil {
+		log.Fatalf("failed to read file, error: %v", err)
+	}
+
+	b := c.Bucket(bucketName)
+
+	wc := b.Object("test2.txt").NewWriter(ctx)
+	wc.ContentType = "text/plain"
+	wc.Metadata = map[string]string{"x-test": "true"}
+
+	if _, err := io.Copy(wc, strings.NewReader(string(content))); err != nil {
+		log.Fatalf("failed to perform GCP Storage write, error: %v", err)
+	}
+
+	if err := wc.Close(); err != nil {
+		log.Fatalf("failed to perform GCP Storage close, error: %v", err)
 	}
 }
 
