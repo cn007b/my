@@ -32,9 +32,9 @@ func getClientWithAPIKey(ctx context.Context, key string) *storage.Client {
 	return client
 }
 
-func getClientWithCredentialsFile(ctx context.Context, filepath string) *storage.Client {
+func getClientWithCredentialsFile(ctx context.Context, SAFilePath string) *storage.Client {
 	// INFO: option.WithServiceAccountFile is deprecated in favor of option.WithCredentialsFile.
-	client, err := storage.NewClient(ctx, option.WithCredentialsFile(filepath))
+	client, err := storage.NewClient(ctx, option.WithCredentialsFile(SAFilePath))
 	if err != nil {
 		log.Fatal(err)
 	}
